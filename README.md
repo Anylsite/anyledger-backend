@@ -1,2 +1,2 @@
 # anyledger-backend
-Backend for specific use cases, demo, PoCs.
+Backend for AnyLedger Hub
