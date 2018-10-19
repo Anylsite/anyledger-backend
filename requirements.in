@@ -2,3 +2,4 @@ iso8601
 requests
 gevent
 Flask
+coincurve
