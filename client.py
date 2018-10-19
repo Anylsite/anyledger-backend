@@ -5,35 +5,10 @@ import sqlite3
 import gevent
 from gevent.queue import Queue, Empty
 import requests
-import json
 from pprint import pprint
 
 leshan = 'http://localhost:8080/api'
 q = Queue()
-
-
-class LookupTable:
-    # {
-    # "name": "Energy",
-    # "id": 3331,
-    # "instancetype": "multiple",
-    # "mandatory": false,
-    # "description": "This IPSO object should be used to...
-    # }
-
-    # to
-    # {3331: "Energy"}
-
-    def __init__(self, filename):
-        self.table = {}
-
-        with open(filename) as f:
-            oma_objectids = json.load(f)
-        for o in oma_objectids:
-            self.table[o["id"]] = o["name"]
-
-    def lookup(self, i: int) -> str:
-        return self.table.get(i, 'Unknown')
 
 
 class ClientGreenlet(gevent.Greenlet):
@@ -117,10 +92,11 @@ def find_clients(url):
     clients = [ClientGreenlet(c, leshan, q) for c in client_jsons]
     return clients
 
-
+'''
 clients = find_clients(leshan)
 greenlets = clients + [DatabaseWorker(q)]
 
 for g in greenlets:
     g.start()
 gevent.joinall(greenlets)
+'''
