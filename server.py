@@ -1,3 +1,4 @@
+from collections import namedtuple
 from flask import Flask, request
 import json
 import binascii
@@ -8,14 +9,19 @@ from gevent.pywsgi import WSGIServer
 app = Flask(__name__)
 app.debug = True
 
+Datapoint = namedtuple('Datapoint', ['timestamp', 'temp', 'lat', 'lon'])
+
 
 class Sensor:
     def __init__(self, address: str):
         self.address = address
         self.data = []
 
-    def log(self, timestamp, temp, lat, lon):
-        self.data.append((timestamp, temp, lat, lon))
+    def save_data(self, timestamp, temp, lat, lon):
+        self.data.append(Datapoint(timestamp, temp, lat, lon))
+
+    def get_data_as_json(self):
+        return json.dumps([d._asdict() for d in self.data])
 
 
 def join_custom_fractions(real, fraction):
@@ -47,9 +53,18 @@ def process_iot_data():
     s = sensors.get(eth_addr)
     if not s:
         sensors[eth_addr] = s = Sensor(address=eth_addr)
-    s.log(data['timestamp'], temp, lat, lon)
+    s.save_data(data['timestamp'], temp, lat, lon)
 
     return "Done"
+
+
+@app.route("/sensors/")
+@app.route("/sensors/<eth_addr>", methods=['GET'])
+def get_data_for_sensor(eth_addr=None):
+    if not eth_addr:
+        return json.dumps(list(sensors.keys()))
+    sensor = sensors[eth_addr]
+    return sensor.get_data_as_json()
 
 
 if __name__ == "__main__":
