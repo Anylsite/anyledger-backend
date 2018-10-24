@@ -1,5 +1,5 @@
-from collections import namedtuple
 from flask import Flask, request
+import sqlite3
 import json
 import binascii
 
@@ -8,29 +8,34 @@ from gevent.pywsgi import WSGIServer
 
 app = Flask(__name__)
 app.debug = True
-
-Datapoint = namedtuple('Datapoint', ['timestamp', 'temp', 'lat', 'lon'])
+db = sqlite3.connect(':memory:')
+try:
+    db.execute('SELECT temp FROM Sensors')
+except sqlite3.OperationalError:
+    print("Creating Table Sensors")
+    db.execute('CREATE TABLE Sensors (address text, timestamp integer, temp real, lat real, lon real)')
 
 
 class Sensor:
     def __init__(self, address: str):
         self.address = address
-        self.data = []
 
     def save_data(self, timestamp, temp, lat, lon):
-        self.data.append(Datapoint(timestamp, temp, lat, lon))
+        sql_command = '''INSERT INTO Sensors VALUES ("{}", {}, {}, {}, {})'''.format(
+            self.address, timestamp, temp, lat, lon)
+        print(sql_command)
+        db.execute(sql_command)
+        db.commit()
 
     def get_data_as_json(self):
-        return json.dumps([d._asdict() for d in self.data])
+        cur = db.execute('SELECT * FROM Sensors WHERE address = '.format(self.address))
+        cur.fetchall()
 
 
 def join_custom_fractions(real, fraction):
     return '.'.join([str(real), str(fraction)])
 
 
-eth_smart_contract_mock = {
-    '0x416E281ca1B9D5BC93849305d15f1B40F33B599E': True
-}
 sensors = {}
 
 
@@ -43,10 +48,6 @@ def process_iot_data():
     temp = join_custom_fractions(data['temperature']['val1'], data['temperature']['val2'])
     lat = join_custom_fractions(data['lat']['val1'], data['lat']['val2'])
     lon = join_custom_fractions(data['lon']['val1'], data['lon']['val2'])
-
-    # Check if IoT device has permissions with our hub.
-    if not eth_smart_contract_mock.get(eth_addr, False):
-        return "IoT device not authorized", 403
 
     # If the sensor does not exist yet, create it.
     # Log the data.
