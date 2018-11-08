@@ -30,3 +30,4 @@ for t in trip_along_ringbahn_raw:
     signature = utils.sign(private_key, t_json.encode()).hex().upper()
     trip_along_ringbahn.append((t_json, signature))
     print('curl http://localhost:5000/data -X POST --header "X-Anyledger-Sig: {}" --header "Content-Type: application/json" -d \'{}\''.format(signature, t_json))
+
